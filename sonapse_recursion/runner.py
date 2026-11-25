@@ -101,7 +101,8 @@ def execute(job):
 def fingerprint():
     digest = hashlib.sha256()
     for file in sorted(Path(__file__).parent.glob("*.py")):
-        digest.update(file.read_bytes())
+        digest.update(file.name.encode() + b"\0")
+        digest.update(file.read_bytes().replace(b"\r\n", b"\n"))
     digest.update((np.__version__ + platform.python_version()).encode())
     return digest.hexdigest()
 
