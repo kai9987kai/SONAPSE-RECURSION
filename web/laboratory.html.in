@@ -1,0 +1,110 @@
+<!DOCTYPE html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sonapse Recursion · Research laboratory</title>
+<style>
+*{box-sizing:border-box}body{--bg:#eef1ec;--panel:#fafcf8;--ink:#182920;--line:#ccd6cb;--muted:#4a6154;--accent:#087451;--other:#a94e24;background:var(--bg);color:var(--ink);font:16px/1.5 "Segoe UI",Arial,sans-serif;margin:0}
+body.dark{--bg:#111b18;--panel:#18251f;--ink:#edf4e9;--line:#36493c;--muted:#b1c4b4;--accent:#73dbad;--other:#ffa76e}
+header,main{max-width:1240px;margin:auto;padding:22px 4vw}header{display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line)}header strong{letter-spacing:.1em;font-size:15px}h1{font:500 clamp(32px,5vw,64px)/1.1 Georgia,serif;letter-spacing:-.045em;margin:12px 0}h2{font-size:17px;margin:0 0 14px}p{color:var(--muted);margin:8px 0 20px}button,select,input{font:inherit;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:5px;padding:7px 10px}button{cursor:pointer}button.primary{background:var(--accent);color:var(--bg)}.controls,.readings{display:flex;gap:10px;align-items:center;flex-wrap:wrap}label{font-size:13px;display:grid;gap:3px}.grid{display:grid;grid-template-columns:minmax(0,2.5fr) minmax(220px,1fr);gap:14px;margin:18px 0}article,details{padding:20px;background:var(--panel);border:1px solid var(--line);border-radius:8px}canvas{width:100%;height:270px;display:block}aside b{font:500 32px Georgia,serif;display:block;color:var(--accent)}aside div{margin-bottom:12px}.legend{display:flex;gap:20px;color:var(--muted);font-size:13px}.legend span:first-child{color:var(--accent)}.legend span:last-child{color:var(--other)}summary{cursor:pointer;font-weight:600}table{border-collapse:collapse;width:100%;margin-top:10px;font-size:14px}td,th{text-align:left;border-bottom:1px solid var(--line);padding:6px}#seed{width:90px}@media(max-width:700px){.grid{grid-template-columns:1fr}aside{display:flex;gap:20px;flex-wrap:wrap}header,main{padding:14px}canvas{height:200px}}
+</style>
+<header><strong>SONAPSE / RECURSION</strong><button id="theme">Switch theme</button></header>
+<main><h1>Neural emulation laboratory</h1><p>Replay trained neural dynamics and compare them with an independent reference, one tick at a time.</p>
+<div class="controls"><label>Workspace<select id="mode"><option value="circuit">Host connectome</option><option value="pendulum">Computational imagination</option><option value="graft">Virtual memory graft</option><option value="nested">Nested emulation</option><option value="interference">Imagination interference</option><option value="evolution">Evolution replay</option><option value="survival">Survival and resources</option><option value="channel">Predictive interface</option></select></label><label>Input seed<input type="number" id="seed" value="17" min="0" max="4294967295"></label><label>Ticks per frame<select id="speed"><option>1</option><option>4</option><option>16</option></select></label><label id="gateLabel">Condition<select id="gate"></select></label></div>
+<div class="grid"><article><h2 id="chartTitle"></h2><canvas id="plot" aria-label="Recent output trajectories"></canvas><div class="legend"><span id="first"></span><span id="second"></span></div></article><article><h2>Run measurements</h2><aside><div>Virtual clock<b id="tick"></b></div><div id="metricName"></div><b id="metric"></b><small id="info"></small></aside></article></div>
+<details id="network"><summary>Reference connectome topology</summary><canvas id="topology" aria-label="Directed matrix of reference synaptic weights"></canvas></details><div class="controls" style="margin-top:16px"><button class="primary" id="run">Run</button><button id="step">Single step</button><button id="reset">Reset / replay</button><button id="save">Export trace</button></div><p id="description"></p>
+<details open><summary>Backend verification results</summary><p>Recorded CPU trials. Intervals resample independent seeds. Browser traces above use a separate input stream.</p><label>Benchmark<select id="study"></select></label><table><thead><tr><th>Metric</th><th>Mean</th><th>95% interval</th></tr></thead><tbody id="metrics"></tbody></table><div id="backend" hidden><h2>Run this benchmark locally</h2><div class="controls"><label>First seed<input type="number" id="firstSeed" value="100" min="0"></label><label>Seed count<input type="number" id="seedCount" min="1" max="16" value="4"></label><button id="launch">Run benchmark</button></div><p id="job" role="status"></p></div></details></main>
+<script>
+"use strict";
+const models=/*MODEL_DATA*/null, report=/*REPORT_DATA*/null;
+const el=id=>document.getElementById(id);
+const setups={
+evolution:["Validation error by generation","Evolutionary lineage","Independent search","Recorded seed 0. Both searches evaluate 20 mutations. Each tick reveals one generation; lower error is better.",["Recorded lineage"]],
+circuit:["Recurrent circuit activity","Learned rate","Reference rate","Three coupled rate neurons. Only the observed drive enters the trained host during rollout.",["Autonomous"]],
+pendulum:["Driven pendulum angle","Neural angle","Reference angle","A trained two-state transition tracks a damped pendulum in simulation units.",["Autonomous"]],
+graft:["Memory graft output","Graft port","Target port","Two conditions expose or disconnect the output of the fixed learned circuit. The Python study additionally fits a downstream decoder.",["Connected","Disconnected"]],
+nested:["Distilled child state","Outer host","Inner host","The outer transition learned examples generated by the inner neural emulator. Both run independently from zero state. This tests distillation.",["Autonomous"]],
+interference:["State isolation","Perturbed host","Reference rate","Synthetic creative noise is injected through a configurable gate after the neural update.",["Shared","Partial","Isolated"]],
+survival:["Forager health","Selected policy","Native policy","A toy resource scheduler allocates four ticks of work every seven ticks. The uninterrupted workload competes with threat detection. Zero health ends that arm.",["Busy","Interrupt","Protected"]],
+channel:["Remote signal reconstruction","Receiver estimate","Source signal","Timestamps reject stale arrivals. A bounded slope predictor extrapolates delivered samples. The backend separately tests a learned predictor.",["Predict","Hold"]]};
+function rng(seed){return ()=>{seed=(Math.imul(1664525,seed)+1013904223)>>>0;return seed/4294967296}}
+function mul(x,m){return m[0].map((_,j)=>x.reduce((v,a,i)=>v+a*m[i][j],0))}
+const clamp=(x,lo,hi)=>Math.max(lo,Math.min(hi,x));
+function neural(s,u,m){const raw=[...s,u,1];return mul([...raw,...mul(raw,m.project).map(Math.tanh)],m.readout).map(v=>clamp(v,-8,8))}
+let state, timer=null, random, records;
+function pause(){clearInterval(timer);timer=null;el("run").textContent="Run"}
+function reset(){
+ pause();const mode=el("mode").value, spec=setups[mode], n=mode==="pendulum"?2:3;
+ random=rng(Number(el("seed").value)>>>0);records=[];
+ state={t:0,h:Array(n).fill(0),r:Array(n).fill(0),sum:0,animals:[{hp:6,x:0},{hp:6,x:0}],work:0,jobs:0,queue:[],latest:[-1,0],prev:[-1,0],lost:0};
+ el("chartTitle").textContent=spec[0];el("first").textContent=spec[1];el("second").textContent=spec[2];el("description").textContent=spec[3];render()
+}
+function setup(){const gate=el("gate");gate.replaceChildren(...setups[el("mode").value][4].map(t=>new Option(t,t)));reset()}
+function advance(){
+ const s=state,mode=el("mode").value,gate=el("gate").value,t=s.t++,u=.5*Math.sin(.14*t)+.4*(random()-.5);
+ let a,b;
+ if(mode==="evolution"){const g=models.evolution[t];a=g.score;b=g.independent;s.work=g.accepted;if(t===19)pause()}else if(mode==="survival"){
+  const hazard=random()<.1, food=Math.floor(random()*9)-4;
+  if(t%7===0)s.jobs=4;
+  const busy=s.jobs>0 && !(gate==="Interrupt" && hazard) && s.animals[0].hp>0;
+  if(busy){s.jobs--;s.work++}
+  s.animals.forEach((p,i)=>{if(p.hp<=0)return;const alert=i===1 || !busy || gate==="Protected";if(hazard && !alert)p.hp=Math.max(0,p.hp-2);else if(!hazard && alert){p.x+=Math.sign(food-p.x);if(food===p.x)p.hp=Math.min(6,p.hp+1)}});[a,b]=s.animals.map(p=>p.hp)
+ }else if(mode==="channel"){
+  b=Math.sin(.11*t)+.12*u;const loss=random()<.12,delay=2+Math.floor(random()*5);if(loss)s.lost++;else s.queue.push([t+delay,t,b]);
+  for(const [due,stamp,val] of s.queue)if(due===t && stamp>s.latest[0]){s.prev=s.latest;s.latest=[stamp,val]}
+  s.queue=s.queue.filter(q=>q[0]>t);a=s.latest[1];if(gate==="Predict" && s.prev[0]>=0)a=clamp(a+(a-s.prev[1])*(t-s.latest[0])/(s.latest[0]-s.prev[0]),-1.3,1.3)
+ }else{
+  const m=mode==="pendulum"?models.pendulum:models.circuit;
+  s.h=neural(s.h,u,mode==="nested"?models.nested:m);
+  if(mode==="nested")s.r=neural(s.r,u,m);
+  else if(mode==="pendulum"){const [x,v]=s.r;const w=v+.12*(u-Math.sin(x)-.25*v);s.r=[x+.12*w,w]}
+  else{s.r=m.weights.map((row,i)=>.4*s.r[i]+.6*Math.tanh(row.reduce((acc,w,j)=>acc+w*s.r[j],m.ports[i]*u)))}
+  if(mode==="interference")s.h=s.h.map(v=>v+(random()-.5)*.28*({Shared:1,Partial:.5,Isolated:0}[gate]));
+  a=mode==="graft" && gate==="Disconnected"?0:s.h[0];b=s.r[0]
+ }
+ s.sum+=(a-b)**2;records.push({tick:t+1,drive:u,selected:a,comparison:b});if(records.length>=10000)pause()
+}
+function render(){
+ const s=state,mode=el("mode").value;
+ drawTopology(mode);el("seed").disabled=mode==="evolution";
+ el("tick").textContent=s.t;el("metricName").textContent=mode==="survival"?"Work ticks":mode==="evolution"?"Accepted mutations":"Output RMSE";
+ el("metric").textContent=["survival","evolution"].includes(mode)?s.work:(s.t?Math.sqrt(s.sum/s.t).toFixed(5):"—");
+ el("info").textContent=mode==="channel"?s.lost+" packets lost":mode==="evolution"?"20 recorded generations":"Trace capacity · 10,000 ticks";
+ const c=el("plot"),rect=c.getBoundingClientRect(),dpr=window.devicePixelRatio||1;c.width=Math.round(rect.width*dpr);c.height=Math.round(rect.height*dpr);
+ const ctx=c.getContext("2d");ctx.scale(dpr,dpr);const w=rect.width,h=rect.height,style=getComputedStyle(document.body);
+ const data=records.slice(-192), bound=Math.max(.2,...data.flatMap(p=>[Math.abs(p.selected),Math.abs(p.comparison)]))*1.1;
+ ctx.strokeStyle=style.getPropertyValue("--line");for(let j=1;j<6;j++){ctx.beginPath();ctx.moveTo(0,h*j/6);ctx.lineTo(w,h*j/6);ctx.stroke()}
+ for(const [key,color,dash] of [["comparison","--other",[5,4]],["selected","--accent",[]]]){
+ ctx.strokeStyle=style.getPropertyValue(color);ctx.lineWidth=2;ctx.setLineDash(dash);ctx.beginPath();
+ data.forEach((p,i)=>{const x=i*w/(mode==="evolution"?19:191),y=h/2-p[key]*h/(2*bound);if(!i)ctx.moveTo(x,y);else ctx.lineTo(x,y)});ctx.stroke()}
+}
+function drawTopology(mode){
+ const panel=el("network");panel.hidden=mode!=="circuit";if(panel.hidden||!panel.open)return;
+ const c=el("topology"),ctx=c.getContext("2d");c.width=640;c.height=240;
+ const style=getComputedStyle(document.body),matrix=models.circuit.weights;
+ ctx.font="15px Segoe UI";ctx.fillStyle=style.getPropertyValue("--ink");
+ ctx.fillText("Rows receive · columns send",12,24);
+ matrix.forEach((row,i)=>{row.forEach((v,j)=>{const x=72+j*92,y=55+i*56;ctx.globalAlpha=.18+.82*Math.min(1,Math.abs(v));ctx.fillStyle=style.getPropertyValue(v<0?"--other":"--accent");ctx.fillRect(x,y,86,50);ctx.globalAlpha=1;ctx.fillStyle=style.getPropertyValue("--ink");ctx.fillText(v.toFixed(2),x+20,y+30)});ctx.fillText("N"+(i+1),20,85+i*56);ctx.fillText("N"+(i+1),100+i*92,48);ctx.fillText("Rate "+state.r[i].toFixed(3),380,85+i*56)})
+}
+el("network").ontoggle=()=>drawTopology(el("mode").value);
+function limit(){return el("mode").value==="evolution"?20:10000}
+function batch(n){for(let i=0;i<n && state.t<limit();i++)advance();render()}
+el("run").onclick=()=>{if(timer)pause();else if(state.t<limit()){timer=setInterval(()=>batch(+el("speed").value),50);el("run").textContent="Pause"}};
+el("step").onclick=()=>{pause();batch(1)};el("reset").onclick=reset;el("mode").onchange=setup;el("seed").onchange=reset;el("gate").onchange=reset;
+el("theme").onclick=()=>{document.body.classList.toggle("dark");render()};
+el("save").onclick=()=>{const blob=new Blob([JSON.stringify({mode:el("mode").value,condition:el("gate").value,seed:+el("seed").value,records})],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="sonapse-trace.json";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)};
+el("study").replaceChildren(...Object.keys(report).map(n=>new Option(n,n)));function verification(){const s=report[el("study").value];el("metrics").replaceChildren(...Object.entries(s.mean).map(([k,v])=>{const row=document.createElement("tr");[k.replaceAll("_"," "),v.toPrecision(5),(s.intervals[k]||[]).map(x=>x.toPrecision(4)).join(" – ")].forEach(text=>row.insertCell().textContent=text);return row}))}
+if(location.protocol==="http:" && location.hostname==="127.0.0.1"){
+ el("backend").hidden=false;
+ el("launch").onclick=async()=>{
+  const button=el("launch"),job=el("job"),name=el("study").value;button.disabled=true;
+  try{
+   const request=await fetch("/api/run",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({study:name,first:Number(el("firstSeed").value),count:Number(el("seedCount").value)})});
+   if(!request.ok)throw Error((await request.json()).error);
+   job.textContent="Running "+name+"…";
+   for(;;){await new Promise(done=>setTimeout(done,300));const result=await (await fetch("/api/status")).json();
+    if(result.state==="failed")throw Error(result.error);
+    if(result.state==="complete"){const study=result.report.studies[name];report[name]={mean:study.mean,intervals:study.bootstrap_95,seeds:study.trials.length};
+     el("study").value=name;verification();job.textContent="Completed "+study.trials.length+" trials. The table shows this run.";break}}
+  }catch(error){job.textContent=String(error)}finally{button.disabled=false}
+ };
+}
+el("study").onchange=verification;el("study").value="recurrent";verification();window.addEventListener("resize",render);setup();
+</script></html>
