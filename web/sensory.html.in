@@ -1,0 +1,115 @@
+<section id="sensory" aria-labelledby="sensoryTitle">
+  <style>
+    #sensory {
+      margin: 1.5rem 0;
+      border-top: 1px solid var(--line);
+      padding-top: 1.4rem;
+    }
+    #sensory h2 {
+      font:
+        500 2rem Georgia,
+        serif;
+      margin: 0;
+    }
+    #sensory .screens {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(215px, 100%), 1fr));
+      gap: 12px;
+      margin: 14px 0;
+    }
+    #sensory figure {
+      margin: 0;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px;
+    }
+    #sensory figcaption {
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+    #sensory video,
+    #sensory canvas {
+      display: block;
+      width: 100%;
+      height: auto;
+      aspect-ratio: 5/3;
+      background: #11252a;
+      object-fit: contain;
+    }
+    #sensory #dream {
+      image-rendering: pixelated;
+    }
+    #sensory input {
+      max-width: 100%;
+    }
+    #senseLog {
+      font-variant-numeric: tabular-nums;
+      color: var(--muted);
+    }
+    #memoryActions {
+      margin-top: 12px;
+    }
+  </style>
+  <h2 id="sensoryTitle">Sensory imagination</h2>
+  <p>
+    Feed a moving scene into the connectome. Its activity and recent visual
+    context retrieve remembered transitions to generate a low-resolution
+    continuation.
+  </p>
+  <div class="controls">
+    <label
+      >Example stimulus<select id="senseExample">
+        <option value="orbit">Orbit · moving light</option>
+        <option value="ripple">Ripple · expanding wave</option>
+        <option value="crossing">Crossing · two objects</option>
+      </select></label
+    ><button id="sensePlay" class="primary">Feed example</button
+    ><button id="senseCam">Use webcam</button
+    ><label
+      >Feed a video file<input
+        id="senseFile"
+        type="file"
+        accept="video/*" /></label
+    ><button id="senseStop">Stop input</button>
+  </div>
+  <div class="screens">
+    <figure>
+      <figcaption>Observed scene</figcaption>
+      <video muted playsinline id="senseVideo"></video>
+    </figure>
+    <figure>
+      <figcaption>Live connectome</figcaption>
+      <canvas
+        id="senseGraph"
+        width="400"
+        height="240"
+        aria-label="Directed recurrent connectome and visual receptors"
+      ></canvas>
+    </figure>
+    <figure>
+      <figcaption>Imagined continuation</figcaption>
+      <canvas
+        id="dream"
+        width="20"
+        height="12"
+        aria-label="Hypothetical future visual state"
+      ></canvas>
+    </figure>
+  </div>
+  <div id="senseLog"></div>
+  <div class="controls" id="memoryActions">
+    <label
+      >Imagination context<select id="recallEpisode">
+        <option value="">Latest observation</option>
+      </select></label
+    ><button id="freeDream">Imagine from memory</button
+    ><button id="storeMemory">Save visual memory locally</button
+    ><button id="exportVisual">Export visual memory</button
+    ><button id="clearMemory">Clear visual memory</button>
+  </div>
+  <p id="senseStatus" role="status">
+    Choose an input. Camera access starts only when selected. Saved memory
+    contains small color frames and neural states.
+  </p>
+</section>

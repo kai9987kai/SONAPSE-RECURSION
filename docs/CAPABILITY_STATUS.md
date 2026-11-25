@@ -20,3 +20,5 @@ This inventory distinguishes usable experiments from broader requirements in the
 | Visualization, storage and export | Offline replay, online local trial launch, interactive evolution replay, recorded results, SQLite cache, portable JSON checkpoints and trace download | Full live backend topology editing, 3D rendering and GPU profiling |
 
 The browser and backend have different execution contracts. Browser neural trajectories use embedded frozen parameters, browser survival uses the simplified forager, and evolution replays a measured lineage. The local dashboard can additionally launch the Python studies. A faster display refresh or worker count changes presentation or scheduling only.
+
+[Section-by-section master prompt audit](MASTER_PROMPT_AUDIT.md) · [Live sensory workspace](SENSORY_IMAGINATION.md)
