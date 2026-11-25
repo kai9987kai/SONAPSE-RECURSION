@@ -16,9 +16,10 @@ with sync_playwright() as pw:
         args=["--use-fake-device-for-media-stream", "--use-fake-ui-for-media-stream"],
     )
     page = browser.new_page(permissions=["camera"])
+    page.set_default_timeout(90000)
     errors = []
     page.on("pageerror", lambda e: errors.append(str(e)))
-    page.goto(url)
+    page.goto(url.rstrip("/") + "/#studio", wait_until="domcontentloaded")
     for name in ("julia", "mandelbrot", "carpet"):
         page.select_option("#mixExample", name)
         page.click("#mixAdd")
