@@ -52,6 +52,7 @@ NAMES = (
     "pareto",
     "closed_loop",
     "sparse",
+    "sparse_65k",
     "river",
     "governance",
     "binding",
@@ -81,6 +82,8 @@ def execute(job):
         values = design(seed)
     elif name == "sparse":
         values = sparse_study(seed)
+    elif name == "sparse_65k":
+        values = sparse_study(seed, n=65536, ticks=512, inputs=32)
     elif name == "river":
         values = river(seed)
     elif name == "governance":
@@ -107,8 +110,11 @@ def fingerprint():
     return digest.hexdigest()
 
 
-def run(names, seeds, folder, workers):
+def run(names, seeds, folder, workers, progress=None):
     folder.mkdir(parents=True, exist_ok=True)
+    names, seeds = tuple(names), tuple(seeds)
+    if not names or not seeds:
+        raise ValueError("At least one study and seed are required")
     version = fingerprint()
     with closing(sqlite3.connect(folder / "trials.sqlite", timeout=60)) as db:
         db.execute(
@@ -117,10 +123,18 @@ def run(names, seeds, folder, workers):
         rows = {
             (row[0], row[1]): row[2:]
             for row in db.execute(
-                "SELECT name,seed,metrics,cpu FROM trials WHERE version=?", (version,)
+                "SELECT name,seed,metrics,cpu FROM trials WHERE version=? AND seed BETWEEN ? AND ? "
+                + "AND name IN ("
+                + ",".join("?" for _ in names)
+                + ")",
+                (version, min(seeds), max(seeds), *names),
             )
         }
         jobs = [(n, s) for n in names for s in seeds if (n, s) not in rows]
+        total = len(names) * len(seeds)
+        completed = total - len(jobs)
+        if progress:
+            progress(completed, total)
         pool = ProcessPoolExecutor(workers) if workers > 1 and jobs else None
         try:
             for n, s, v, cpu in pool.map(execute, jobs) if pool else map(execute, jobs):
@@ -131,6 +145,9 @@ def run(names, seeds, folder, workers):
                 )
                 db.commit()
                 rows[n, s] = data, cpu
+                completed += 1
+                if progress:
+                    progress(completed, total)
         finally:
             if pool:
                 pool.shutdown(cancel_futures=True)
@@ -150,20 +167,20 @@ def run(names, seeds, folder, workers):
             for k in trials[0]["metrics"]
         }
         # Same resampled seeds across metrics preserve pairing.
-        draws = np.random.default_rng(491).integers(
-            len(trials), size=(2000, len(trials))
-        )
-        ci = (
-            {
-                k: np.quantile(
-                    np.array([t["metrics"][k] for t in trials])[draws].mean(axis=1),
-                    [0.025, 0.975],
-                ).tolist()
-                for k in means
+        ci = {}
+        if len(trials) > 1:
+            rng = np.random.default_rng(491)
+            values = {k: np.array([t["metrics"][k] for t in trials]) for k in means}
+            bootstrap = {k: np.empty(2000) for k in means}
+            chunk = max(1, min(2000, 131072 // len(trials)))
+            for start in range(0, 2000, chunk):
+                stop = min(2000, start + chunk)
+                draws = rng.integers(len(trials), size=(stop - start, len(trials)))
+                for k, array in values.items():
+                    bootstrap[k][start:stop] = array[draws].mean(axis=1)
+            ci = {
+                k: np.quantile(v, [0.025, 0.975]).tolist() for k, v in bootstrap.items()
             }
-            if len(trials) > 1
-            else {}
-        )
         report["studies"][n] = dict(trials=trials, mean=means, bootstrap_95=ci)
     with tempfile.NamedTemporaryFile(
         mode="w", delete=False, dir=folder, encoding="utf8"
@@ -178,9 +195,10 @@ def main():
     profiles = {
         "headless": (NAMES, 5, 1),
         "research": (NAMES, 8, 2),
+        "research-scale": (NAMES, 32, 4),
         "educational": (("single", "pendulum", "graft"), 1, 1),
         "evolution": (("evolution", "pareto", "design"), 8, 3),
-        "large-connectome": (("sparse",), 5, 1),
+        "large-connectome": (("sparse", "sparse_65k"), 5, 1),
         "hardware-limited": (("single", "graft", "channel"), 2, 1),
     }
     parser.add_argument("--profile", choices=profiles, default="headless")

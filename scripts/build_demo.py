@@ -36,34 +36,54 @@ def build():
             )
     models["evolution"] = []
     evolution(0, models["evolution"])
-    studies = json.loads((ROOT / "results/report.json").read_text())["studies"]
-    report = {
-        n: {
-            "mean": r["mean"],
-            "intervals": r["bootstrap_95"],
-            "seeds": len(r["trials"]),
+
+    def summarize(path):
+        studies = json.loads(path.read_text(encoding="utf8"))["studies"]
+        return {
+            name: dict(
+                mean=row["mean"],
+                intervals=row["bootstrap_95"],
+                seeds=len(row["trials"]),
+            )
+            for name, row in studies.items()
         }
-        for n, r in studies.items()
-    }
+
+    report = summarize(ROOT / "results/report.json")
+    scaled = summarize(ROOT / "results/scale/report.json")
     page = (ROOT / "web/laboratory.html.in").read_text(encoding="utf8")
     clips = {
         path.stem: base64.b64encode(path.read_bytes()).decode("ascii")
         for path in sorted((ROOT / "web/stimuli").glob("*.webm"))
     }
-    if set(clips) != {"orbit", "ripple", "crossing"}:
+    if not {
+        "orbit",
+        "ripple",
+        "crossing",
+        "julia",
+        "mandelbrot",
+        "carpet",
+        "interference",
+        "ribbons",
+    } <= set(clips):
         raise ValueError("Missing sensory example clip")
     sensory = (ROOT / "web/sensory.js").read_text(encoding="utf8")
     page = page.replace(
         "<!--SENSORY_PANEL-->",
-        (ROOT / "web/sensory.html.in").read_text(encoding="utf8"),
+        (ROOT / "web/studio.html.in").read_text(encoding="utf8")
+        + (ROOT / "web/sensory.html.in").read_text(encoding="utf8"),
     )
     page = page.replace(
-        "/*SENSORY_CODE*/", sensory.replace("SENSORY_STIMULI_DATA", json.dumps(clips))
+        "/*SENSORY_CODE*/",
+        "const STUDIO_CLIPS="
+        + json.dumps(clips)
+        + ";\n"
+        + sensory.replace("SENSORY_STIMULI_DATA", "STUDIO_CLIPS")
+        + (ROOT / "web/studio.js").read_text(encoding="utf8"),
     )
     (ROOT / "web/index.html").write_text(
-        page.replace("/*MODEL_DATA*/null", json.dumps(models)).replace(
-            "/*REPORT_DATA*/null", json.dumps(report)
-        ),
+        page.replace("/*MODEL_DATA*/null", json.dumps(models))
+        .replace("/*REPORT_DATA*/null", json.dumps(report))
+        .replace("/*SCALE_DATA*/null", json.dumps(scaled)),
         encoding="utf8",
     )
 

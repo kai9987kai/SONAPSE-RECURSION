@@ -1,24 +1,24 @@
 """Sparse event propagation for a discrete threshold connectome."""
 
 from collections import defaultdict
+from heapq import heappop, heappush
 import numpy as np
 
 
-def sparse_study(seed):
+def sparse_study(seed, n=4096, ticks=256, inputs=8):
     rng = np.random.default_rng(seed)
-    n = 4096
     edges = [(node, (node + 1) % n, 1.0, 1) for node in range(n)]
     edges.extend((node, int(rng.integers(n)), 0.25, 3) for node in range(n))
     substrate = EventConnectome(n, edges)
-    for node in rng.choice(n, 8, replace=False):
+    for node in rng.choice(n, inputs, replace=False):
         substrate.inject(0, int(node), 1.0)
-    events = substrate.advance(256)
+    events = substrate.advance(ticks)
     return dict(
         nodes=n,
         edges=len(edges),
         spikes=len(events),
         event_operations=substrate.operations,
-        dense_node_ticks=n * 256,
+        dense_node_ticks=n * ticks,
         active_nodes=len({node for _, node in events}),
     )
 
@@ -40,12 +40,15 @@ class EventConnectome:
                 raise ValueError("Invalid edge")
             self.outgoing[src].append((dst, weight, delay))
         self.events = defaultdict(dict)
+        self._times = []
         self.available = np.zeros(size, dtype=int)
         self.clock, self.operations = 0, 0
 
     def inject(self, time, node, value):
         if time < self.clock or not 0 <= node < self.size or not np.isfinite(value):
             raise ValueError("Invalid event")
+        if time not in self.events:
+            heappush(self._times, time)
         pending = self.events[time]
         pending[node] = pending.get(node, 0.0) + value
 
@@ -53,10 +56,11 @@ class EventConnectome:
         if until < self.clock:
             raise ValueError("Cannot reverse time")
         trace = []
-        while self.events:
-            tick = min(self.events)
+        while self._times:
+            tick = self._times[0]
             if tick >= until:
                 break
+            heappop(self._times)
             pending = self.events.pop(tick)
             self.clock = tick
             for node, value in sorted(pending.items()):

@@ -20,3 +20,9 @@ python -m sonapse_recursion.import_connectome $inputCsv --source $sourceUrl --li
 ```
 
 The checked-in import report records the byte digest, node identifiers and edge count. Common scalar stimulation and a normalized, nonnegative weight matrix simplify the task. This model cannot infer physiological synaptic signs.
+
+## Larger replication runs
+
+The research-scale profile evaluates all registered studies across 32 seeds with four bounded workers. The broader replication export is generated with `python -m sonapse_recursion --profile research-scale --first-seed 1000 --out results/scale`. Its seeds are disjoint from the eight-seed reference suite and the earlier targeted replication. Use `--workers 1` on a constrained laptop. The local dashboard also supports batches of up to 64 seeds and reports the number of committed or cached trials.
+
+The 65,536-node sparse study runs 512 ticks with 32 initial inputs and two outgoing edges per node. Time slots use a priority queue and simultaneous inputs aggregate before thresholding. The original 4,096-node study is still available under `--study sparse`. Bootstrap estimation uses the same seeded paired draws as the reference implementation and processes them in bounded chunks.

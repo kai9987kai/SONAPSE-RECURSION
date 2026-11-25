@@ -65,4 +65,19 @@ lines.extend(
         "[Complete machine-readable results](../results/report.json).",
     ]
 )
+scale = json.loads((ROOT / "results/scale/report.json").read_text(encoding="utf8"))[
+    "studies"
+]
+trials = sum(len(s["trials"]) for s in scale.values())
+rate, spike = (scale[name]["mean"] for name in ("recurrent", "lif"))
+lines.extend(
+    [
+        "",
+        "## Scale replication",
+        "",
+        f"Seeds 1000–1031 produced {trials:,} additional trials across {len(scale)} studies. The recurrent host achieved mean rollout RMSE {rate['autonomous_rmse']:.5f} against {rate['linear_rmse']:.5f} for its linear control. LIF saturation remained high at {spike['saturated_fraction']:.1%}. The new sparse substrate workload has 65,536 nodes and 131,072 edges.",
+        "",
+        "[Full trial-level scale export](../results/scale/report.json).",
+    ]
+)
 (ROOT / "docs/BENCHMARKS.md").write_text("\n".join(lines) + "\n", encoding="utf8")

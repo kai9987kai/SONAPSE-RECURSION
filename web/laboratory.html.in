@@ -7,14 +7,15 @@ header,main{max-width:1240px;margin:auto;padding:22px 4vw}header{display:flex;al
 </style>
 <header><strong>SONAPSE / RECURSION</strong><button id="theme">Switch theme</button></header>
 <main><h1>Neural emulation laboratory</h1><p>Replay trained neural dynamics and compare them with an independent reference, one tick at a time.</p>
-<p><a href="#sensory">Open sensory imagination ↓</a></p><div class="controls"><label>Workspace<select id="mode"><option value="circuit">Host connectome</option><option value="pendulum">Computational imagination</option><option value="graft">Virtual memory graft</option><option value="nested">Nested emulation</option><option value="interference">Imagination interference</option><option value="evolution">Evolution replay</option><option value="survival">Survival and resources</option><option value="channel">Predictive interface</option></select></label><label>Input seed<input type="number" id="seed" value="17" min="0" max="4294967295"></label><label>Ticks per frame<select id="speed"><option>1</option><option>4</option><option>16</option></select></label><label id="gateLabel">Condition<select id="gate"></select></label></div>
+<p><a href="#studio">Open multistream imagination ↓</a></p><div class="controls"><label>Workspace<select id="mode"><option value="circuit">Host connectome</option><option value="pendulum">Computational imagination</option><option value="graft">Virtual memory graft</option><option value="nested">Nested emulation</option><option value="interference">Imagination interference</option><option value="evolution">Evolution replay</option><option value="survival">Survival and resources</option><option value="channel">Predictive interface</option></select></label><label>Input seed<input type="number" id="seed" value="17" min="0" max="4294967295"></label><label>Ticks per frame<select id="speed"><option>1</option><option>4</option><option>16</option></select></label><label id="gateLabel">Condition<select id="gate"></select></label></div>
 <div class="grid"><article><h2 id="chartTitle"></h2><canvas id="plot" aria-label="Recent output trajectories"></canvas><div class="legend"><span id="first"></span><span id="second"></span></div></article><article><h2>Run measurements</h2><aside><div>Virtual clock<b id="tick"></b></div><div id="metricName"></div><b id="metric"></b><small id="info"></small></aside></article></div>
 <details id="network"><summary>Reference connectome topology</summary><canvas id="topology" aria-label="Directed matrix of reference synaptic weights"></canvas></details><div class="controls" style="margin-top:16px"><button class="primary" id="run">Run</button><button id="step">Single step</button><button id="reset">Reset / replay</button><button id="save">Export trace</button></div><p id="description"></p>
 <!--SENSORY_PANEL-->
-<details open><summary>Backend verification results</summary><p>Recorded CPU trials. Intervals resample independent seeds. Browser traces above use a separate input stream.</p><label>Benchmark<select id="study"></select></label><table><thead><tr><th>Metric</th><th>Mean</th><th>95% interval</th></tr></thead><tbody id="metrics"></tbody></table><div id="backend" hidden><h2>Run this benchmark locally</h2><div class="controls"><label>First seed<input type="number" id="firstSeed" value="100" min="0"></label><label>Seed count<input type="number" id="seedCount" min="1" max="16" value="4"></label><button id="launch">Run benchmark</button></div><p id="job" role="status"></p></div></details></main>
+<details open><summary>Backend verification results</summary><p>Recorded CPU trials. Intervals resample independent seeds. Browser traces above use a separate input stream.</p><label>Results<select id="cohort"><option value="baseline">Reference · seeds 0–7</option><option value="scale">Scale run · seeds 1000–1031</option><option value="live" hidden>Local run</option></select></label><label>Benchmark<select id="study"></select></label><table><thead><tr><th>Metric</th><th>Mean</th><th>95% interval</th></tr></thead><tbody id="metrics"></tbody></table><div id="backend" hidden><h2>Run this benchmark locally</h2><div class="controls"><label>First seed<input type="number" id="firstSeed" value="100" min="0"></label><label>Seed count<input type="number" id="seedCount" min="1" max="64" value="4"></label><button id="launch">Run benchmark</button></div><p id="job" role="status"></p></div></details></main>
 <script>
 "use strict";
-const models=/*MODEL_DATA*/null, report=/*REPORT_DATA*/null;
+const models=/*MODEL_DATA*/null, referenceReport=/*REPORT_DATA*/null,scaleReport=/*SCALE_DATA*/null;
+const cohorts={baseline:referenceReport,scale:scaleReport,live:{}};let report=referenceReport;
 const el=id=>document.getElementById(id);
 const setups={
 evolution:["Validation error by generation","Evolutionary lineage","Independent search","Recorded seed 0. Both searches evaluate 20 mutations. Each tick reveals one generation; lower error is better.",["Recorded lineage"]],
@@ -91,7 +92,11 @@ el("run").onclick=()=>{if(timer)pause();else if(state.t<limit()){timer=setInterv
 el("step").onclick=()=>{pause();batch(1)};el("reset").onclick=reset;el("mode").onchange=setup;el("seed").onchange=reset;el("gate").onchange=reset;
 el("theme").onclick=()=>{document.body.classList.toggle("dark");render()};
 el("save").onclick=()=>{const blob=new Blob([JSON.stringify({mode:el("mode").value,condition:el("gate").value,seed:+el("seed").value,records})],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="sonapse-trace.json";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)};
-el("study").replaceChildren(...Object.keys(report).map(n=>new Option(n,n)));function verification(){const s=report[el("study").value];el("metrics").replaceChildren(...Object.entries(s.mean).map(([k,v])=>{const row=document.createElement("tr");[k.replaceAll("_"," "),v.toPrecision(5),(s.intervals[k]||[]).map(x=>x.toPrecision(4)).join(" – ")].forEach(text=>row.insertCell().textContent=text);return row}))}
+function selectCohort(){
+ const prior=el("study").value;report=cohorts[el("cohort").value];el("study").replaceChildren(...Object.keys(report).map(n=>new Option(n,n)));if(prior in report)el("study").value=prior;verification()
+}
+el("cohort").onchange=selectCohort;selectCohort();
+function verification(){const s=report[el("study").value];el("metrics").replaceChildren(...Object.entries(s.mean).map(([k,v])=>{const row=document.createElement("tr");[k.replaceAll("_"," "),v.toPrecision(5),(s.intervals[k]||[]).map(x=>x.toPrecision(4)).join(" – ")].forEach(text=>row.insertCell().textContent=text);return row}))}
 if(location.protocol==="http:" && location.hostname==="127.0.0.1"){
  el("backend").hidden=false;
  el("launch").onclick=async()=>{
@@ -101,9 +106,10 @@ if(location.protocol==="http:" && location.hostname==="127.0.0.1"){
    if(!request.ok)throw Error((await request.json()).error);
    job.textContent="Running "+name+"…";
    for(;;){await new Promise(done=>setTimeout(done,300));const result=await (await fetch("/api/status")).json();
+    if(result.state==="running")job.textContent="Running "+name+" · "+result.completed+" / "+result.total+" trials";
     if(result.state==="failed")throw Error(result.error);
-    if(result.state==="complete"){const study=result.report.studies[name];report[name]={mean:study.mean,intervals:study.bootstrap_95,seeds:study.trials.length};
-     el("study").value=name;verification();job.textContent="Completed "+study.trials.length+" trials. The table shows this run.";break}}
+    if(result.state==="complete"){const study=result.report.studies[name];cohorts.live[name]={mean:study.mean,intervals:study.bootstrap_95,seeds:study.trials.length};
+     el("cohort").querySelector('option[value="live"]').hidden=false;el("cohort").value="live";selectCohort();el("study").value=name;verification();job.textContent="Completed "+study.trials.length+" trials. The table shows this run.";break}}
   }catch(error){job.textContent=String(error)}finally{button.disabled=false}
  };
 }

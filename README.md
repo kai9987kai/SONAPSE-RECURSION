@@ -4,6 +4,14 @@ A CPU research laboratory for testing whether a learned neural transition can ma
 
 **Open [the standalone laboratory](web/index.html)** directly from disk. Select a workspace, press Run or Single step, and use Reset / replay to repeat its input. Open Backend verification results for the measured seed distributions. The offline file includes trained parameters and benchmark summaries.
 
+## Multistream imagination
+
+Open **Multistream imagination** and add several examples, files, a webcam or a direct video URL. The studio generates predictions up to 1920 × 1080 and retains the full visual observation archive in this browser. Pick a starting episode and a rollout horizon to imagine autonomously. [Studio controls, memory and replay](docs/MULTISTREAM.md).
+
+The large-connectome profile now runs the original 4,096-node study and a 65,536-node, 131,072-edge study. Select only the larger study with `python -m sonapse_recursion --study sparse_65k --seeds 8 --out results/large`.
+
+The [32-seed scale run](results/scale/report.json) covers every registered study. See [reproduction settings](docs/REPRODUCIBILITY.md) for the command and seed ranges.
+
 ## Live visual input and imagination
 
 Open **Sensory imagination** in the dashboard to feed one of three included videos, a local file, or a webcam. Watch the recurrent graph and the generated visual continuation side by side. Choose a remembered episode to imagine after capture stops. Memory stays local and can be saved or exported. See [sensory controls and model details](docs/SENSORY_IMAGINATION.md) and the [41-section master prompt audit](docs/MASTER_PROMPT_AUDIT.md).

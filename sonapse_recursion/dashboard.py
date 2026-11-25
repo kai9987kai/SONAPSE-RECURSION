@@ -14,6 +14,12 @@ def serve(page, out, port):
     pool = ThreadPoolExecutor(max_workers=1)
     lock = Lock()
     future = None
+    counts = (0, 0)
+
+    def update_progress(completed, total):
+        nonlocal counts
+        with lock:
+            counts = completed, total
 
     class Handler(BaseHTTPRequestHandler):
         def reply(self, status, body, kind="application/json"):
@@ -38,9 +44,15 @@ def serve(page, out, port):
             elif self.path == "/api/status":
                 with lock:
                     task = future
+                    completed, total = counts
                 if task is None or not task.done():
                     return self.reply(
-                        200, {"state": "idle" if task is None else "running"}
+                        200,
+                        {
+                            "state": "idle" if task is None else "running",
+                            "completed": completed,
+                            "total": total,
+                        },
                     )
                 try:
                     result = task.result()
@@ -51,7 +63,7 @@ def serve(page, out, port):
                 self.reply(404, {"error": "Unknown route"})
 
         def do_POST(self):
-            nonlocal future
+            nonlocal future, counts
             if (
                 not self.local()
                 or self.headers.get("Origin")
@@ -75,9 +87,9 @@ def serve(page, out, port):
                     or type(start) is not int
                     or type(count) is not int
                     or not 0 <= start <= 10000000
-                    or not 1 <= count <= 16
+                    or not 1 <= count <= 64
                 ):
-                    raise ValueError("Choose a known study and 1–16 seeds")
+                    raise ValueError("Choose a known study and 1–64 seeds")
             except (ValueError, TypeError, KeyError) as e:
                 return self.reply(400, {"error": str(e)})
             with lock:
@@ -85,7 +97,10 @@ def serve(page, out, port):
                     return self.reply(
                         409, {"error": "A trial batch is already running"}
                     )
-                future = pool.submit(run, [name], range(start, start + count), out, 1)
+                counts = 0, count
+                future = pool.submit(
+                    run, [name], range(start, start + count), out, 1, update_progress
+                )
             self.reply(202, {"state": "running"})
 
     with ThreadingHTTPServer(("127.0.0.1", port), Handler) as server:

@@ -1,5 +1,5 @@
 {
-  "source_sha256": "48d4ae8752880db5a8bbe96c41a42fcbfafc9390cd17331967d4a0519378f358",
+  "source_sha256": "53e0dde4198126e2180e61d7e7c8dbe35558241b320d30b3accc14c0b742bc50",
   "python": "3.12.10",
   "numpy": "2.4.3",
   "studies": {
@@ -51,7 +51,7 @@
             "scheduled_saturation": 0.0,
             "model_bytes": 1048
           },
-          "cpu_seconds": 0.046875
+          "cpu_seconds": 0.03125
         },
         {
           "seed": 103,
@@ -67,7 +67,7 @@
             "scheduled_saturation": 0.0,
             "model_bytes": 1048
           },
-          "cpu_seconds": 0.046875
+          "cpu_seconds": 0.03125
         },
         {
           "seed": 104,
@@ -83,7 +83,7 @@
             "scheduled_saturation": 0.0,
             "model_bytes": 1048
           },
-          "cpu_seconds": 0.0625
+          "cpu_seconds": 0.046875
         },
         {
           "seed": 105,
@@ -99,7 +99,7 @@
             "scheduled_saturation": 0.0,
             "model_bytes": 1048
           },
-          "cpu_seconds": 0.0625
+          "cpu_seconds": 0.046875
         },
         {
           "seed": 106,
@@ -131,7 +131,7 @@
             "scheduled_saturation": 0.0,
             "model_bytes": 1048
           },
-          "cpu_seconds": 0.046875
+          "cpu_seconds": 0.0625
         }
       ],
       "mean": {
@@ -253,7 +253,7 @@
             "scheduled_saturation": 0.0,
             "model_bytes": 1600
           },
-          "cpu_seconds": 0.0625
+          "cpu_seconds": 0.03125
         },
         {
           "seed": 104,
@@ -285,7 +285,7 @@
             "scheduled_saturation": 0.0,
             "model_bytes": 1600
           },
-          "cpu_seconds": 0.046875
+          "cpu_seconds": 0.03125
         },
         {
           "seed": 106,
@@ -301,7 +301,7 @@
             "scheduled_saturation": 0.0,
             "model_bytes": 1600
           },
-          "cpu_seconds": 0.046875
+          "cpu_seconds": 0.0625
         },
         {
           "seed": 107,
@@ -317,7 +317,7 @@
             "scheduled_saturation": 0.0,
             "model_bytes": 1600
           },
-          "cpu_seconds": 0.046875
+          "cpu_seconds": 0.0625
         }
       ],
       "mean": {

@@ -348,6 +348,7 @@
     dream = forecast(last); // Score candidates before adding the current observation.
 
     memory.push(last);
+    window.dispatchEvent(new CustomEvent("studio-classic-frame",{detail:last}));
     if (memory.length > LIMIT) memory.shift();
 
     tick++;
@@ -356,6 +357,7 @@
   }
 
   async function start(kind, file) {
+    window.dispatchEvent(new Event("classic-active"));
     halt();
     const id = token;
 
@@ -435,6 +437,7 @@
   };
 
   $("freeDream").onclick = () => {
+    window.dispatchEvent(new Event("classic-active"));
     halt();
     const selected = $("recallEpisode").value;
     let context = selected
@@ -497,6 +500,7 @@
       return;
     halt();
     memory = [];
+    window.dispatchEvent(new Event("studio-classic-clear"));
     last = null;
     dream = null;
     state = Array(N).fill(0);
@@ -516,6 +520,7 @@
     }
   };
 
+  window.addEventListener("studio-active", halt);
   window.addEventListener("pagehide", halt);
   render();
 })();

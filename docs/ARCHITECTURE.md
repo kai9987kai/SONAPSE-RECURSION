@@ -11,3 +11,9 @@ The inspected [Sonapse-LAB graft bus](https://github.com/kai9987kai/Sonapse-LAB/
 Background on neural dynamics and readouts comes from [Maass, Natschläger and Markram, 2002](https://doi.org/10.1162/089976602760407955). Mixing generated and teacher contexts during training follows the experimental distinction described by [Bengio et al., 2015](https://proceedings.neurips.cc/paper/2015/hash/e995f98d56967d946471af29d7bf99f1-Abstract.html). Neither paper validates this implementation.
 
 The separate anatomical import probe reads the OpenWorm hermaphrodite edge list, records a SHA-256 fingerprint, keeps chemical edges, and normalizes the induced adjacency. All physiology for this probe is synthetic. The public data file is retrieved separately. [Pinned OpenWorm source](https://github.com/openworm/CElegansNeuroML/blob/b36380a36d2a6dda0f03c946c433524b25ea2268/herm_full_edgelist.csv).
+
+## Multistream visual path
+
+The studio composites independent browser media decoders and optionally records separate source views in the same atomic IndexedDB batch. Its 96-region recurrent visual encoder supplies the existing trained host with a scalar drive. Every archived descriptor participates in spatial context retrieval, while up to three observed successor pairs supply fine-scale motion to the full-resolution output. Generated rollout frames never enter the observation store. Python replay checks saved descriptors, state transitions and host outputs. [Operational details](MULTISTREAM.md).
+
+The sparse simulation engine schedules unique event times with a heap. Input coalescing, deterministic node order and refractory rules remain part of the reference dynamics. The scale profile and chunked paired-bootstrap estimator use the same experiment implementations as the reference suite. [Scale-run settings](REPRODUCIBILITY.md).

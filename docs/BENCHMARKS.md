@@ -1,6 +1,6 @@
 # Benchmark results
 
-40 synthetic studies, seeds 0–7, 320 trials. Each row below compares two conditions on the same seed. The interval resamples the paired differences with replacement 2,000 times. With eight independent seeds, these are exploratory uncertainty estimates.
+41 synthetic studies, seeds 0–7, 328 trials. Each row below compares two conditions on the same seed. The interval resamples the paired differences with replacement 2,000 times. With eight independent seeds, these are exploratory uncertainty estimates.
 
 | Study and outcome | First condition | Comparison | First minus comparison, mean [95% interval] |
 |---|---:|---:|---:|
@@ -31,7 +31,7 @@ The graft benefited a task aligned with its own pretraining. The nested two-cloc
 
 The full export includes seed-level results and timing for every study. Native task accuracy, RMSE, probabilities, work ticks and architecture parameters use different units. Compare values only within an outcome.
 
-logic, single, recurrent, plastic, pendulum, spring, collision, rc, flow, structural, graft, nested, interference, survival, channel, adaptation, evolution, lif, external, interruption, machine, design, hierarchy, curriculum, pareto, closed_loop, sparse, river, governance, binding, oscillator, motor, memory, associative, rlc, ballistic, linkage, dam_load, register, automaton
+logic, single, recurrent, plastic, pendulum, spring, collision, rc, flow, structural, graft, nested, interference, survival, channel, adaptation, evolution, lif, external, interruption, machine, design, hierarchy, curriculum, pareto, closed_loop, sparse, sparse_65k, river, governance, binding, oscillator, motor, memory, associative, rlc, ballistic, linkage, dam_load, register, automaton
 
 ## Replication and imported graph
 
@@ -40,3 +40,9 @@ The bounded replication command selects the lowest and highest mean autonomous-t
 A separate imported-graph probe used an alphabetical induced subgraph of 25 cells and 86 nonzero directed chemical edges. Both models received a shared scalar drive. Learned versus linear RMSE was 0.00791 versus 0.02506 on one rollout. These are synthetic dynamics with normalized anatomical counts. [Import provenance and exact nodes](../results/imported.json).
 
 [Complete machine-readable results](../results/report.json).
+
+## Scale replication
+
+Seeds 1000–1031 produced 1,312 additional trials across 41 studies. The recurrent host achieved mean rollout RMSE 0.00221 against 0.01707 for its linear control. LIF saturation remained high at 94.1%. The new sparse substrate workload has 65,536 nodes and 131,072 edges.
+
+[Full trial-level scale export](../results/scale/report.json).

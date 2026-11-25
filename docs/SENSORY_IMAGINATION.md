@@ -1,4 +1,6 @@
-# Sensory imagination
+# Classic sensory imagination
+
+For higher-resolution prediction, full-archive context and simultaneous inputs, open the [multistream studio](MULTISTREAM.md).
 
 Open the sensory section of the standalone dashboard. Choose **Feed example**, **Feed a video file**, or **Use webcam**. The included six-second Orbit, Ripple and Crossing WebM clips are original synthetic stimuli. They are embedded in the offline page. Input audio is unused. Camera tracks stop when switching inputs, stopping, starting autonomous imagination, or leaving the page.
 

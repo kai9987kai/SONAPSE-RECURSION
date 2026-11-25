@@ -32,16 +32,20 @@ with tempfile.TemporaryDirectory() as output:
             page = browser.new_page()
             page.goto(url)
             page.select_option("#study", "logic")
-            page.fill("#seedCount", "2")
+            page.fill("#seedCount", "32")
             page.click("#launch")
             page.wait_for_function(
-                "document.querySelector('#job').textContent.includes('Completed 2 trials')"
+                "document.querySelector('#job').textContent.includes('Completed 32 trials')"
             )
             assert (Path(output) / "report.json").exists()
             assert "truth table accuracy" in page.locator("#metrics").inner_text()
+            assert page.locator("#cohort").input_value() == "live"
+            page.select_option("#cohort", "scale")
+            page.select_option("#study", "sparse_65k")
+            assert "active nodes" in page.locator("#metrics").inner_text()
             browser.close()
             print(
-                "Live dashboard launched two trials, persisted and displayed their results"
+                "Live dashboard launched 32 trials, persisted and displayed their results"
             )
     finally:
         server.terminate()
