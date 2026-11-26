@@ -284,13 +284,102 @@
     );
     status();
   }
+  let sleep=null;
+  function dreamControls(){
+    const active=mode==="Dreaming";
+    $("dreamWake").disabled=!active;
+    $("dreamPause").disabled=!active;
+    $("dreamPause").textContent=active && sleep.paused?"Resume dream":"Pause dream";
+    $("dreamStep").disabled=!active || !sleep?.paused;
+    $("dreamJournal").disabled=!sleep?.journal.length;
+    $("dreamStrip").disabled=!sleep?.stills.length;
+  }
+  async function dreamFrame(id,singleStep){
+    const session=sleep;
+    if(!session.plan || session.age>=session.plan.duration){
+      const rows=[...legacy.values(),...records.values()];
+      const plan=session.composer.plan(rows,session.cue,{
+        novelty:Number($("dreamFreedom").value)/100,
+        theme:$("dreamTheme").value,startingEpisode:session.startingEpisode
+      });
+      const textures=await Promise.all(plan.fragments.map(async r=>dreamTexture(await pixels(r))));
+      if(id!==generation || session!==sleep)return;
+      session.transition=session.frame?dreamTexture(paint.getImageData(0,0,output.width,output.height)):null;
+      session.plan=plan;session.textures=textures;session.age=0;
+      selectedCount=plan.eligible;
+      session.journal.push({scene:plan.number,firstFrame:session.frame+1,world:plan.world,
+        travelerForm:["kite","bird","lantern"][plan.traveler.form],freedom:plan.novelty,eligibleMemories:plan.eligible,
+        fragments:plan.fragments.map(r=>({id:r.id,source:r.source,epoch:r.epoch,tick:r.tick}))});
+      if(session.journal.length>96)session.journal.shift();
+    }
+    if(session.paused && !singleStep)return;
+    renderDream(paint,session.plan,session.textures,session.age,host,session.transition);
+    const cue=describe(output);
+    updateState(cue);session.cue=cue;session.age++;session.frame++;
+    if(session.age>=5)session.transition=null;
+    if(session.age===1 || session.age===6){
+      const still=document.createElement("canvas");still.width=200;still.height=Math.round(200*output.height/output.width);
+      still.getContext("2d").drawImage(output,0,0,still.width,still.height);
+      const shot={still,world:session.plan.world,scene:session.plan.number};
+      if(session.age===6)session.stills.pop();
+      session.stills.push(shot);if(session.stills.length>6)session.stills.shift();
+      const strip=$("dreamGallery");strip.replaceChildren(...session.stills.map(item=>{
+        const fig=document.createElement("figure"),label=document.createElement("figcaption");
+        label.textContent=item.scene+" · "+item.world;fig.append(item.still,label);return fig;
+      }));
+    }
+    $("mixImage").disabled=false;
+    const plan=session.plan;
+    $("dreamReadout").textContent="Seed "+session.composer.seed+" · Scene "+plan.number+" · Frame "+session.frame+" · "+plan.world+" · "+
+      (plan.fragments.length?"Recalled "+plan.fragments.map(r=>r.source).join(" + "):"Entirely procedural scene");
+    dreamControls();
+  }
+  $("dreamStart").onclick=async()=>{
+    const raw=$("dreamSeed").value;
+    if(!$("dreamSeed").checkValidity()){flash("Choose a whole-number seed between 0 and 4294967295.");return;}
+    const seed=raw===""?crypto.getRandomValues(new Uint32Array(1))[0]:Number(raw);
+    stop();activate();const id=generation;
+    await ready;
+    if(id!==generation)return;
+    sleep={composer:new DreamComposer(seed),startingEpisode:$("mixEpisode").value,paused:false,age:0,frame:0,journal:[],stills:[],cue:null,plan:null};
+    mode="Dreaming";$("dreamGallery").replaceChildren();dreamControls();
+    $("dreamReadout").textContent="Entering dream…";
+    flash("Dream frames feed the visual connectome. Setting and freedom changes apply to the next scene.");
+    startLoop();
+  };
+  $("dreamPause").onclick=()=>{
+    if(mode!=="Dreaming")return;
+    sleep.paused=!sleep.paused;dreamControls();
+    if(!sleep.paused)void tick();
+  };
+  $("dreamStep").onclick=()=>{if(mode==="Dreaming" && sleep.paused)void tick(true);};
+  $("dreamWake").onclick=()=>{stop();flash("Awake. The final image and dream journal are available.");};
+  $("dreamStrip").onclick=()=>{
+    if(!sleep?.stills.length)return;
+    const strip=document.createElement("canvas");strip.width=200*sleep.stills.length;
+    const height=Math.max(...sleep.stills.map(s=>s.still.height));strip.height=height+32;
+    const g=strip.getContext("2d");g.fillStyle="#142820";g.fillRect(0,0,strip.width,strip.height);
+    const filename="dream-strip-"+sleep.composer.seed+".png";
+    sleep.stills.forEach(({still,scene,world},i)=>{
+      g.drawImage(still,i*200,0);g.fillStyle="#e6f2e4";g.font="14px sans-serif";g.fillText(scene+" · "+world,8+i*200,height+21);
+    });
+    strip.toBlob(blob=>{if(!blob)return;const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=filename;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);},"image/png");
+  };
+  $("dreamJournal").onclick=()=>{
+    if(!sleep)return;
+    const journal={schema:"sonapse-dream-v1",seed:sleep.composer.seed,startingEpisode:sleep.startingEpisode,
+      frames:sleep.frame,scenes:sleep.composer.scenes,synthetic:true,entries:sleep.journal};
+    const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify(journal,null,2)],{type:"application/json"}));
+    a.download="dream-"+journal.seed+".json";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+  };
   function stop() {
     lifecycle++;
     resetEpisode();
     clearInterval(timer);
     for (const item of inputs.values()) release(item);
     inputs.clear();
-    mode = "Idle";
+    if(mode==="Dreaming" && sleep){sleep.textures=[];sleep.transition=null;sleep.plan=null;}
+    mode = "Idle";dreamControls();
     showInputs();
   }
   function activate() {
@@ -607,11 +696,14 @@
         error += Math.abs(a.data[i + c] - b.data[i + c]);
     return error / (a.width * a.height * 3 * 255);
   }
-  async function tick() {
+  async function tick(singleStep=false) {
     if (busy || mode === "Idle") return;
     busy = true;
+    const runGeneration=generation;
     try {
-      if (mode === "Observing") {
+      if(mode==="Dreaming"){
+        if(!sleep.paused || singleStep)await dreamFrame(generation,singleStep);
+      }else if (mode === "Observing") {
         if (!compose()) return;
         const id = generation,
           d = describe(scene);
@@ -630,6 +722,7 @@
       }
       status();
     } catch (e) {
+      if(runGeneration!==generation)return;
       stop();
       flash(
         "Studio paused. " +
@@ -707,7 +800,7 @@
         done = settled(tx);
       for (const s of ["index", "images"]) tx.objectStore(s).clear();
       await done;
-      selectedCount = 0;
+      selectedCount = 0;sleep=null;dreamControls();$("dreamGallery").replaceChildren();$("dreamReadout").textContent="";
       ctx.clearRect(0, 0, scene.width, scene.height);
       paint.clearRect(0, 0, output.width, output.height);
       drawNetwork();
@@ -725,7 +818,7 @@
       if (!blob) return;
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
-      link.download = "imagined-" + output.width + "x" + output.height + ".png";
+      link.download = (mode==="Dreaming"?"dream-":"imagined-") + output.width + "x" + output.height + ".png";
       link.click();
       setTimeout(() => URL.revokeObjectURL(link.href), 1000);
     }, "image/png");

@@ -78,6 +78,7 @@ def build():
         + json.dumps(clips)
         + ";\n"
         + sensory.replace("SENSORY_STIMULI_DATA", "STUDIO_CLIPS")
+        + (ROOT / "web/dreaming.js").read_text(encoding="utf8")
         + (ROOT / "web/studio.js").read_text(encoding="utf8"),
     )
     (ROOT / "web/index.html").write_text(

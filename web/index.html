@@ -13,11 +13,19 @@ header,main{max-width:1240px;margin:auto;padding:22px 4vw}header{display:flex;al
 <section id="studio" aria-labelledby="studioTitle">
 <style>
 #studio{border-top:1px solid var(--line);padding:24px 0}#studio h2{font:500 2.1rem Georgia,serif;margin:0}#studio .views{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(270px,100%),1fr));gap:12px;margin:14px 0}#studio figure{margin:0;padding:10px;border:1px solid var(--line);border-radius:7px;background:var(--panel)}#studio figcaption{margin-bottom:6px;font-weight:600}#studio canvas{width:100%;height:auto;aspect-ratio:5/3;background:#122824}#studio input{max-width:100%}#studioSources button{margin:4px 6px 0 0}#studioArchive{font-variant-numeric:tabular-nums}
+#dreamGallery{display:flex;gap:8px;overflow-x:auto}#dreamGallery figure{flex:0 0 150px;padding:5px}#dreamGallery canvas{aspect-ratio:auto}#dreamGallery figcaption{font-size:13px}#dreaming{margin:18px 0;border-top:1px solid var(--line)}
 </style><h2 id="studioTitle">Multistream imagination</h2>
 <p>Add sources to a shared scene. Each sampled scene is saved in this browser. Every available visual memory contributes to the context for the next imagined frame.</p>
 <div class="controls"><label>Example<select id="mixExample"></select></label><button class="primary" id="mixAdd">Add example</button><button id="mixCamera">Add webcam</button><label>Add video files<input id="mixFiles" type="file" accept="video/*" multiple></label><label>Video stream URL<input id="mixUrl" type="url" placeholder="https://…/video.webm"></label><button id="mixStream">Add stream</button><label>Output resolution<select id="mixResolution"><option value="160">160 × 96</option><option value="320" selected>320 × 192</option><option value="640">640 × 384</option><option value="1280">1280 × 720 (HD)</option><option value="1920">1920 × 1080 (Full HD)</option></select></label><label>Imagination horizon<select id="mixHorizon"><option value="1">1 step</option><option value="4">4 steps</option><option value="8">8 steps</option></select></label></div>
 <label><span><input type="checkbox" id="mixSeparate" checked> Also remember each individual feed</span></label><div id="studioSources" aria-label="Remove individual inputs"></div><div class="views"><figure><figcaption>Combined observation</figcaption><canvas id="mixScene" width="320" height="192"></canvas></figure><figure><figcaption>Recurrent visual activity</figcaption><canvas id="mixNetwork" width="480" height="288"></canvas></figure><figure><figcaption>Imagined continuation</figcaption><canvas id="mixDream" width="320" height="192"></canvas></figure></div>
 <div class="controls"><button id="mixImagine">Imagine from memory</button><button id="mixStop">Stop studio</button><label>Starting episode<select id="mixEpisode"><option value="">Latest</option></select></label><button id="mixImage" disabled>Save imagined PNG</button><button id="mixExport">Export studio memories</button><button id="mixClear">Clear studio archive</button></div>
+<section id="dreaming" aria-labelledby="dreamTitle"><h3 id="dreamTitle">Dreaming</h3>
+<p>Let remembered fragments drift into invented places, or start with an empty archive. Dreams appear in the imagined continuation panel above.</p>
+<div class="controls"><button class="primary" id="dreamStart">Start dreaming</button><button id="dreamPause" disabled>Pause dream</button><button id="dreamStep" disabled>Single dream step</button><button id="dreamWake" disabled>Wake</button>
+<label>Dream setting<select id="dreamTheme"><option>Drift</option><option>Tidal sky</option><option>Branching garden</option><option>Floating city</option><option>Folded passage</option></select></label>
+<label>Associative freedom<input id="dreamFreedom" type="range" min="0" max="100" value="65"></label>
+<label>Dream seed<input id="dreamSeed" placeholder="Random" type="number" min="0" max="4294967295" step="1"></label>
+<button id="dreamStrip" disabled>Save dream strip</button><button id="dreamJournal" disabled>Export dream journal</button></div><p id="dreamReadout" role="status"></p><div id="dreamGallery" aria-label="Recent dream scenes"></div></section>
 <p id="studioArchive"></p><p id="studioStatus" role="status">Select a stimulus to start. Adding a webcam requests video access.</p></section>
 <section id="sensory" aria-labelledby="sensoryTitle">
   <style>
@@ -765,6 +773,139 @@ const STUDIO_CLIPS={"carpet": "GkXfo59ChoEBQveBAULygQRC84EIQoKEd2VibUKHgQJChYECG
   window.addEventListener("pagehide", halt);
   render();
 })();
+// Scene selection is independent of rendering, capture timers and database writes.
+class DreamComposer {
+  constructor(seed) {
+    this.seed=seed>>>0;
+    this.random=(()=>{let s=this.seed;return ()=>{s=(Math.imul(s,1664525)+1013904223)>>>0;return s/4294967296;};})();
+    this.previous=new Set();
+    this.scenes=0;
+    this.traveler={form:Math.floor(this.random()*3),orbit:this.random()*Math.PI*2};
+  }
+  choose(rows, query, novelty, excluded) {
+    // Weighted reservoir sampling gives every eligible frame a positive probability.
+    let winner, total=0;
+    for(const row of rows){
+      if(excluded.has(row.id))continue;
+      let distance=0;
+      if(query)for(let i=0;i<288;i+=3)distance+=Math.abs(row.desc[i]-query[i])/(96*255);
+      const affinity=1/(.12+distance);
+      const weight=(.08+(1-novelty)*affinity+novelty*(.25+distance))*
+        (this.previous.has(row.epoch)? .35:1);
+      total+=weight;
+      if(this.random()*total<weight)winner=row;
+    }
+    return winner;
+  }
+  plan(rows,query,options) {
+    const {novelty,theme,startingEpisode}=options;
+    const candidates=rows.slice().sort((a,b)=>a.id<b.id?-1:a.id>b.id?1:0);
+    let firstPool=candidates;
+    if(!this.scenes && startingEpisode){
+      const matching=candidates.filter(r=>r.epoch===startingEpisode);
+      if(matching.length)firstPool=matching;
+    }
+    const anchor=this.choose(firstPool,query,novelty,new Set());
+    let partners=anchor?candidates.filter(r=>r.epoch!==anchor.epoch):[];
+    if(!partners.length)partners=candidates;
+    const associate=this.choose(partners,anchor?.desc||query,novelty,new Set([anchor?.id]));
+    const fragments=[anchor,associate].filter(Boolean);
+    this.previous=new Set(fragments.map(r=>r.epoch));
+    const worlds=["Tidal sky","Branching garden","Floating city","Folded passage"];
+    const world=theme==="Drift"?worlds[Math.floor(this.random()*worlds.length)]:theme;
+    const tone=anchor?Math.atan2(anchor.desc[1]-anchor.desc[2],anchor.desc[0]-anchor.desc[1])*180/Math.PI:360*this.random();
+    const hue=(tone+360+novelty*140*this.random())%360;
+    if(this.scenes && this.random()<novelty*.65)this.traveler.form=(this.traveler.form+1)%3;
+    const focus=fragments.map(r=>{
+      let best=-1,cell=0;
+      for(let i=0;i<96;i++){
+        const k=i*3,neighbor=(i%12 ? i-1 : (i+1)%96)*3;
+        const contrast=Math.abs(r.desc[k]-r.desc[neighbor])+Math.abs(r.desc[k+1]-r.desc[neighbor+1])+Math.abs(r.desc[k+2]-r.desc[neighbor+2]);
+        if(contrast>best){best=contrast;cell=i;}
+      }
+      return [(cell%12+.5)/12,(Math.floor(cell/12)+.5)/8];
+    });
+    return {traveler:{...this.traveler},focus,number:++this.scenes,world,hue,novelty,fragments,eligible:rows.length,
+      duration:16+Math.floor(this.random()*10),motifs:Array.from({length:45},()=>Array.from({length:6},()=>this.random()))};
+  }
+}
+
+function dreamTexture(image) {
+  const c=document.createElement("canvas");c.width=image.width;c.height=image.height;
+  c.getContext("2d").putImageData(image,0,0);return c;
+}
+
+// Render in normalized coordinates so the same scene grammar works through Full HD.
+function renderDream(g,plan,textures,age,core,transition) {
+  const {world,hue,novelty,motifs}=plan,w=g.canvas.width,h=g.canvas.height;
+  const t=age*.065, pulse=(core[0]||0)*.12;
+  const color=(offset,sat,light)=>`hsl(${hue+offset} ${sat}% ${light}%)`;
+  g.save();g.scale(w/1000,h/600);
+  const sky=g.createLinearGradient(0,0,750,600);
+  sky.addColorStop(0,color(-32,54,11));sky.addColorStop(.55,color(12,53,40));sky.addColorStop(1,color(75,65,71));
+  g.fillStyle=sky;g.fillRect(0,0,1000,600);
+  for(const [x,y,size] of motifs){
+    g.fillStyle=color(68,64,86);g.beginPath();g.arc(1000*x,360*y,1+2*size,0,Math.PI*2);g.fill();
+  }
+  const moon=motifs[0];g.fillStyle=color(90,80,81);g.beginPath();
+  g.arc(150+moon[0]*700,80+moon[1]*125,24+moon[2]*48,0,2*Math.PI);g.fill();
+  if(world==="Tidal sky" || world==="Branching garden"){
+    for(let band=0;band<6;band++){
+      g.beginPath();g.moveTo(0,610);
+      for(let x=0;x<=1010;x+=10){
+        const y=260+band*50+Math.sin(x*.007+t+band)*30+Math.sin(x*.016+band+t*.3)*12;
+        g.lineTo(x,y);
+      }
+      g.lineTo(1010,610);g.fillStyle=color(-18+band*6,40,38-band*4);g.fill();
+    }
+    if(world==="Branching garden"){
+      function branch(x,y,len,angle,depth){
+        const nx=x+len*Math.cos(angle),ny=y+len*Math.sin(angle);
+        g.lineWidth=1+depth*1.2;g.beginPath();g.moveTo(x,y);g.lineTo(nx,ny);g.stroke();
+        if(depth){branch(nx,ny,len*.7,angle-.38-pulse,depth-1);branch(nx,ny,len*.68,angle+.48+Math.sin(t)*.09,depth-1);}
+        else{g.beginPath();g.arc(nx,ny,3,0,7);g.fill();}
+      }
+      g.strokeStyle=color(46,46,65);g.fillStyle=color(84,72,78);
+      for(const [x,y,size] of motifs.slice(1,7))branch(x*1000,440+y*170,34+size*38,-1.5,5);
+    }
+  }else if(world==="Floating city"){
+    for(const [x,y,a,b,c] of motifs){
+      const px=x*1010,base=280+y*340+12*Math.sin(t+a*6),width=14+47*b,height=25+c*130;
+      g.fillStyle=color(-20+40*b,45,18+y*13);g.fillRect(px,base-height,width,height);
+      g.fillStyle=color(85,70,74);
+      for(let wy=base-height+8;wy<base-5;wy+=14)for(let wx=px+5;wx<px+width-3;wx+=10)g.fillRect(wx,wy,3,5);
+    }
+  }else{
+    const vx=460+100*Math.sin(t*.4+moon[0]*6),vy=245+60*pulse;
+    for(let i=19;i>=0;i--){const r=Math.exp(-(i+(1-t*.6%1))*.18);
+      g.save();g.translate(vx,vy);g.rotate(.25*Math.sin(t*.4+i*.21)*novelty);
+      g.strokeStyle=color(i*5,62,35+i*2);g.lineWidth=2+6*r;g.strokeRect(-740*r,-440*r,1480*r,880*r);g.restore();
+    }
+  }
+  // A recurring object retains its orbit across changes of setting and can change form.
+  const flight=plan.traveler.orbit+plan.number*.7+t*.4;
+  g.save();g.translate(500+330*Math.sin(flight),230+95*Math.cos(flight*1.3)+40*pulse);
+  g.rotate(.22*Math.sin(flight));g.fillStyle=color(115,76,80);g.strokeStyle=color(-10,54,24);g.lineWidth=2;
+  g.beginPath();
+  if(plan.traveler.form===0){g.moveTo(-47,0);g.lineTo(0,-17);g.lineTo(42,0);g.lineTo(0,26);g.closePath();}
+  else if(plan.traveler.form===1){g.moveTo(-52,18);g.quadraticCurveTo(-30,-26,0,1);g.quadraticCurveTo(25,-32,55,9);g.quadraticCurveTo(22,0,0,16);g.closePath();}
+  else{g.ellipse(0,0,31,24,0,0,7);}
+  g.fill();g.stroke();
+  g.beginPath();g.moveTo(0,19);g.bezierCurveTo(-8,39,32,52,12+14*Math.sin(t),74);g.stroke();g.restore();
+  // Recalled imagery occupies moving regions of the invented scene.
+  textures.forEach((texture,j)=>{
+    const m=motifs[8+j], x=170+590*m[0]+35*Math.sin(t+m[1]*6),y=150+230*m[2];
+    const radius=55+68*m[3]+22*(1-novelty);
+    g.save();g.translate(x,y);g.rotate(novelty*.4*Math.sin(t+m[4]*5));g.beginPath();
+    g.ellipse(0,0,radius*1.34,radius,0,0,Math.PI*2);g.clip();
+    const crop=.8-.38*novelty;
+    const sx=texture.width*(1-crop)*plan.focus[j][0],sy=texture.height*(1-crop)*plan.focus[j][1];
+    g.globalAlpha=.96-novelty*.24;
+    g.drawImage(texture,sx,sy,texture.width*crop,texture.height*crop,-radius*1.34,-radius,2.68*radius,2*radius);g.restore();
+  });
+  g.restore();
+  if(transition && age<5){g.save();g.globalAlpha=(5-age)/6;g.drawImage(transition,0,0,w,h);g.restore();}
+}
 // Full-archive visual recall. Large images stay on disk until selected for synthesis.
 (() => {
   const $ = (id) => document.getElementById(id);
@@ -1051,13 +1192,102 @@ const STUDIO_CLIPS={"carpet": "GkXfo59ChoEBQveBAULygQRC84EIQoKEd2VibUKHgQJChYECG
     );
     status();
   }
+  let sleep=null;
+  function dreamControls(){
+    const active=mode==="Dreaming";
+    $("dreamWake").disabled=!active;
+    $("dreamPause").disabled=!active;
+    $("dreamPause").textContent=active && sleep.paused?"Resume dream":"Pause dream";
+    $("dreamStep").disabled=!active || !sleep?.paused;
+    $("dreamJournal").disabled=!sleep?.journal.length;
+    $("dreamStrip").disabled=!sleep?.stills.length;
+  }
+  async function dreamFrame(id,singleStep){
+    const session=sleep;
+    if(!session.plan || session.age>=session.plan.duration){
+      const rows=[...legacy.values(),...records.values()];
+      const plan=session.composer.plan(rows,session.cue,{
+        novelty:Number($("dreamFreedom").value)/100,
+        theme:$("dreamTheme").value,startingEpisode:session.startingEpisode
+      });
+      const textures=await Promise.all(plan.fragments.map(async r=>dreamTexture(await pixels(r))));
+      if(id!==generation || session!==sleep)return;
+      session.transition=session.frame?dreamTexture(paint.getImageData(0,0,output.width,output.height)):null;
+      session.plan=plan;session.textures=textures;session.age=0;
+      selectedCount=plan.eligible;
+      session.journal.push({scene:plan.number,firstFrame:session.frame+1,world:plan.world,
+        travelerForm:["kite","bird","lantern"][plan.traveler.form],freedom:plan.novelty,eligibleMemories:plan.eligible,
+        fragments:plan.fragments.map(r=>({id:r.id,source:r.source,epoch:r.epoch,tick:r.tick}))});
+      if(session.journal.length>96)session.journal.shift();
+    }
+    if(session.paused && !singleStep)return;
+    renderDream(paint,session.plan,session.textures,session.age,host,session.transition);
+    const cue=describe(output);
+    updateState(cue);session.cue=cue;session.age++;session.frame++;
+    if(session.age>=5)session.transition=null;
+    if(session.age===1 || session.age===6){
+      const still=document.createElement("canvas");still.width=200;still.height=Math.round(200*output.height/output.width);
+      still.getContext("2d").drawImage(output,0,0,still.width,still.height);
+      const shot={still,world:session.plan.world,scene:session.plan.number};
+      if(session.age===6)session.stills.pop();
+      session.stills.push(shot);if(session.stills.length>6)session.stills.shift();
+      const strip=$("dreamGallery");strip.replaceChildren(...session.stills.map(item=>{
+        const fig=document.createElement("figure"),label=document.createElement("figcaption");
+        label.textContent=item.scene+" · "+item.world;fig.append(item.still,label);return fig;
+      }));
+    }
+    $("mixImage").disabled=false;
+    const plan=session.plan;
+    $("dreamReadout").textContent="Seed "+session.composer.seed+" · Scene "+plan.number+" · Frame "+session.frame+" · "+plan.world+" · "+
+      (plan.fragments.length?"Recalled "+plan.fragments.map(r=>r.source).join(" + "):"Entirely procedural scene");
+    dreamControls();
+  }
+  $("dreamStart").onclick=async()=>{
+    const raw=$("dreamSeed").value;
+    if(!$("dreamSeed").checkValidity()){flash("Choose a whole-number seed between 0 and 4294967295.");return;}
+    const seed=raw===""?crypto.getRandomValues(new Uint32Array(1))[0]:Number(raw);
+    stop();activate();const id=generation;
+    await ready;
+    if(id!==generation)return;
+    sleep={composer:new DreamComposer(seed),startingEpisode:$("mixEpisode").value,paused:false,age:0,frame:0,journal:[],stills:[],cue:null,plan:null};
+    mode="Dreaming";$("dreamGallery").replaceChildren();dreamControls();
+    $("dreamReadout").textContent="Entering dream…";
+    flash("Dream frames feed the visual connectome. Setting and freedom changes apply to the next scene.");
+    startLoop();
+  };
+  $("dreamPause").onclick=()=>{
+    if(mode!=="Dreaming")return;
+    sleep.paused=!sleep.paused;dreamControls();
+    if(!sleep.paused)void tick();
+  };
+  $("dreamStep").onclick=()=>{if(mode==="Dreaming" && sleep.paused)void tick(true);};
+  $("dreamWake").onclick=()=>{stop();flash("Awake. The final image and dream journal are available.");};
+  $("dreamStrip").onclick=()=>{
+    if(!sleep?.stills.length)return;
+    const strip=document.createElement("canvas");strip.width=200*sleep.stills.length;
+    const height=Math.max(...sleep.stills.map(s=>s.still.height));strip.height=height+32;
+    const g=strip.getContext("2d");g.fillStyle="#142820";g.fillRect(0,0,strip.width,strip.height);
+    const filename="dream-strip-"+sleep.composer.seed+".png";
+    sleep.stills.forEach(({still,scene,world},i)=>{
+      g.drawImage(still,i*200,0);g.fillStyle="#e6f2e4";g.font="14px sans-serif";g.fillText(scene+" · "+world,8+i*200,height+21);
+    });
+    strip.toBlob(blob=>{if(!blob)return;const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=filename;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);},"image/png");
+  };
+  $("dreamJournal").onclick=()=>{
+    if(!sleep)return;
+    const journal={schema:"sonapse-dream-v1",seed:sleep.composer.seed,startingEpisode:sleep.startingEpisode,
+      frames:sleep.frame,scenes:sleep.composer.scenes,synthetic:true,entries:sleep.journal};
+    const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify(journal,null,2)],{type:"application/json"}));
+    a.download="dream-"+journal.seed+".json";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+  };
   function stop() {
     lifecycle++;
     resetEpisode();
     clearInterval(timer);
     for (const item of inputs.values()) release(item);
     inputs.clear();
-    mode = "Idle";
+    if(mode==="Dreaming" && sleep){sleep.textures=[];sleep.transition=null;sleep.plan=null;}
+    mode = "Idle";dreamControls();
     showInputs();
   }
   function activate() {
@@ -1374,11 +1604,14 @@ const STUDIO_CLIPS={"carpet": "GkXfo59ChoEBQveBAULygQRC84EIQoKEd2VibUKHgQJChYECG
         error += Math.abs(a.data[i + c] - b.data[i + c]);
     return error / (a.width * a.height * 3 * 255);
   }
-  async function tick() {
+  async function tick(singleStep=false) {
     if (busy || mode === "Idle") return;
     busy = true;
+    const runGeneration=generation;
     try {
-      if (mode === "Observing") {
+      if(mode==="Dreaming"){
+        if(!sleep.paused || singleStep)await dreamFrame(generation,singleStep);
+      }else if (mode === "Observing") {
         if (!compose()) return;
         const id = generation,
           d = describe(scene);
@@ -1397,6 +1630,7 @@ const STUDIO_CLIPS={"carpet": "GkXfo59ChoEBQveBAULygQRC84EIQoKEd2VibUKHgQJChYECG
       }
       status();
     } catch (e) {
+      if(runGeneration!==generation)return;
       stop();
       flash(
         "Studio paused. " +
@@ -1474,7 +1708,7 @@ const STUDIO_CLIPS={"carpet": "GkXfo59ChoEBQveBAULygQRC84EIQoKEd2VibUKHgQJChYECG
         done = settled(tx);
       for (const s of ["index", "images"]) tx.objectStore(s).clear();
       await done;
-      selectedCount = 0;
+      selectedCount = 0;sleep=null;dreamControls();$("dreamGallery").replaceChildren();$("dreamReadout").textContent="";
       ctx.clearRect(0, 0, scene.width, scene.height);
       paint.clearRect(0, 0, output.width, output.height);
       drawNetwork();
@@ -1492,7 +1726,7 @@ const STUDIO_CLIPS={"carpet": "GkXfo59ChoEBQveBAULygQRC84EIQoKEd2VibUKHgQJChYECG
       if (!blob) return;
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
-      link.download = "imagined-" + output.width + "x" + output.height + ".png";
+      link.download = (mode==="Dreaming"?"dream-":"imagined-") + output.width + "x" + output.height + ".png";
       link.click();
       setTimeout(() => URL.revokeObjectURL(link.href), 1000);
     }, "image/png");

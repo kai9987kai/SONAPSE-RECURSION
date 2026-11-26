@@ -1,0 +1,76 @@
+{
+  "schema": "sonapse-dream-v1",
+  "seed": 6301,
+  "startingEpisode": "",
+  "frames": 50,
+  "scenes": 3,
+  "synthetic": true,
+  "entries": [
+    {
+      "scene": 1,
+      "firstFrame": 1,
+      "world": "Floating city",
+      "travelerForm": "lantern",
+      "freedom": 0.65,
+      "eligibleMemories": 5,
+      "fragments": [
+        {
+          "id": "7383f981-2a89-4490-9043-acd33a38dffd:0",
+          "source": "Orbit",
+          "epoch": "7383f981-2a89-4490-9043-acd33a38dffd",
+          "tick": 0
+        },
+        {
+          "id": "dc843b80-0c6c-477d-8a49-dd626a6aaf4d:0",
+          "source": "Julia set",
+          "epoch": "dc843b80-0c6c-477d-8a49-dd626a6aaf4d",
+          "tick": 0
+        }
+      ]
+    },
+    {
+      "scene": 2,
+      "firstFrame": 25,
+      "world": "Folded passage",
+      "travelerForm": "kite",
+      "freedom": 0.65,
+      "eligibleMemories": 5,
+      "fragments": [
+        {
+          "id": "dc843b80-0c6c-477d-8a49-dd626a6aaf4d:2",
+          "source": "Julia set",
+          "epoch": "dc843b80-0c6c-477d-8a49-dd626a6aaf4d",
+          "tick": 2
+        },
+        {
+          "id": "7383f981-2a89-4490-9043-acd33a38dffd:1",
+          "source": "Orbit",
+          "epoch": "7383f981-2a89-4490-9043-acd33a38dffd",
+          "tick": 1
+        }
+      ]
+    },
+    {
+      "scene": 3,
+      "firstFrame": 50,
+      "world": "Folded passage",
+      "travelerForm": "kite",
+      "freedom": 0.65,
+      "eligibleMemories": 5,
+      "fragments": [
+        {
+          "id": "dc843b80-0c6c-477d-8a49-dd626a6aaf4d:2",
+          "source": "Julia set",
+          "epoch": "dc843b80-0c6c-477d-8a49-dd626a6aaf4d",
+          "tick": 2
+        },
+        {
+          "id": "7383f981-2a89-4490-9043-acd33a38dffd:0",
+          "source": "Orbit",
+          "epoch": "7383f981-2a89-4490-9043-acd33a38dffd",
+          "tick": 0
+        }
+      ]
+    }
+  ]
+}
