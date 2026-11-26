@@ -53,3 +53,9 @@ Run `python -m sonapse_recursion.dashboard` from the project root and open the l
 Run `python -m sonapse_recursion.replicate` for the independent-seed follow-up or `python -m sonapse_recursion --profile large-connectome --out results/sparse` for the 4,096-node event-driven experiment.
 
 See [implementation coverage](docs/CAPABILITY_STATUS.md) for the outstanding requirements in each subsystem.
+
+## Dreaming
+
+Open Dreaming in the multistream studio and choose Start dreaming. The studio releases live inputs. A seeded scene composer associates fragments across available episodes, invents landscapes and carries a changing object across scenes. An empty archive works too. The generated image drives the visual connectome, whose output influences subsequent rendering. Pause, single-step and wake controls allow inspection. Save the full-resolution PNG, a six-scene strip, or a JSON journal of the last 96 scene plans and their memory sources. The journal and strip stay in session until the next dream or archive clear.
+
+This is an artistic and computational model of dreamlike recombination. Its scenes and transition rules are designed by hand. Human dream reports provided inspiration for fragmentary recall. [Fosse et al., 2003](https://pubmed.ncbi.nlm.nih.gov/12590838/).
