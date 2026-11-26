@@ -1,0 +1,129 @@
+{
+  "source_sha256": "48d4ae8752880db5a8bbe96c41a42fcbfafc9390cd17331967d4a0519378f358",
+  "python": "3.12.10",
+  "numpy": "2.4.3",
+  "studies": {
+    "recurrent": {
+      "trials": [
+        {
+          "seed": 200,
+          "metrics": {
+            "autonomous_rmse": 0.0014925427887883542,
+            "linear_rmse": 0.013142690087238298,
+            "initial_hold_rmse": 0.25120505251166947,
+            "teacher_rmse": 0.0013753770078953913,
+            "scheduled_rmse": 0.0014965078669920207,
+            "tail_rmse": 0.000897255057770065,
+            "mae": 0.0008513108304465222,
+            "saturated_fraction": 0.0,
+            "scheduled_saturation": 0.0,
+            "model_bytes": 3352
+          },
+          "cpu_seconds": 0.109375
+        },
+        {
+          "seed": 201,
+          "metrics": {
+            "autonomous_rmse": 0.0015831895966939833,
+            "linear_rmse": 0.03155221541455048,
+            "initial_hold_rmse": 0.2728292958166569,
+            "teacher_rmse": 0.001151669725233163,
+            "scheduled_rmse": 0.001511622709068227,
+            "tail_rmse": 0.00048432464233427334,
+            "mae": 0.000549804571330583,
+            "saturated_fraction": 0.0,
+            "scheduled_saturation": 0.0,
+            "model_bytes": 3352
+          },
+          "cpu_seconds": 0.078125
+        },
+        {
+          "seed": 202,
+          "metrics": {
+            "autonomous_rmse": 0.0015083623317419749,
+            "linear_rmse": 0.014265777215870128,
+            "initial_hold_rmse": 0.27339563306765763,
+            "teacher_rmse": 0.0013505849712100505,
+            "scheduled_rmse": 0.0014786857455385883,
+            "tail_rmse": 0.0018579940254862793,
+            "mae": 0.0009049363995035899,
+            "saturated_fraction": 0.0,
+            "scheduled_saturation": 0.0,
+            "model_bytes": 3352
+          },
+          "cpu_seconds": 0.0625
+        },
+        {
+          "seed": 203,
+          "metrics": {
+            "autonomous_rmse": 0.000564413401614404,
+            "linear_rmse": 0.009183951434548539,
+            "initial_hold_rmse": 0.2391034395088244,
+            "teacher_rmse": 0.0004927124472807987,
+            "scheduled_rmse": 0.0005504669816268177,
+            "tail_rmse": 0.00040466458121089354,
+            "mae": 0.00029518285995232664,
+            "saturated_fraction": 0.0,
+            "scheduled_saturation": 0.0,
+            "model_bytes": 3352
+          },
+          "cpu_seconds": 0.078125
+        }
+      ],
+      "mean": {
+        "autonomous_rmse": 0.001287127029709679,
+        "linear_rmse": 0.017036158538051863,
+        "initial_hold_rmse": 0.25913335522620207,
+        "teacher_rmse": 0.001092586037904851,
+        "scheduled_rmse": 0.0012593208258064132,
+        "tail_rmse": 0.0009110595767003779,
+        "mae": 0.0006503086653082554,
+        "saturated_fraction": 0.0,
+        "scheduled_saturation": 0.0,
+        "model_bytes": 3352.0
+      },
+      "bootstrap_95": {
+        "autonomous_rmse": [
+          0.0008004006341462966,
+          0.001560527894717576
+        ],
+        "linear_rmse": [
+          0.010454407879878936,
+          0.026949834082722432
+        ],
+        "initial_hold_rmse": [
+          0.24515424601024693,
+          0.27311246444215725
+        ],
+        "teacher_rmse": [
+          0.0007071805782631116,
+          0.0013629809895527208
+        ],
+        "scheduled_rmse": [
+          0.0007869772029681183,
+          0.0015040652880301238
+        ],
+        "tail_rmse": [
+          0.00044449461177258347,
+          0.0015145766796982778
+        ],
+        "mae": [
+          0.00042249371564145476,
+          0.0008781236149750561
+        ],
+        "saturated_fraction": [
+          0.0,
+          0.0
+        ],
+        "scheduled_saturation": [
+          0.0,
+          0.0
+        ],
+        "model_bytes": [
+          3352.0,
+          3352.0
+        ]
+      }
+    }
+  }
+}
